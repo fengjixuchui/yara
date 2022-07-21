@@ -1,4 +1,4 @@
-AC_INIT([yara], [4.2.0], [vmalvarez@virustotal.com])
+AC_INIT([yara], [4.2.1], [vmalvarez@virustotal.com])
 
 AM_SILENT_RULES([yes])
 AC_CONFIG_SRCDIR([cli/yara.c])
@@ -113,6 +113,13 @@ AC_ARG_ENABLE([address-sanitizer],
   [if test x$enableval = xyes; then
     address_sanitizer=true
   fi])
+
+AC_ARG_ENABLE([undefined-behaviour-sanitizer],
+  [AS_HELP_STRING([--enable-undefined-behaviour-sanitizer], [compiles with -fsanitize=undefined])],
+  [if test x$enableval = xyes; then
+    undefined_behaviour_sanitizer=true
+  fi])
+
 
 AC_ARG_ENABLE([profiling],
   [AS_HELP_STRING([--enable-profiling], [enable rules profiling support])],
@@ -325,6 +332,7 @@ AS_IF([test "x$have_crypto" = "xno"],
       ])
   ],
   [
+    build_authenticode_module=true # Authenticode relies on openssl
     build_hash_module=true
     CFLAGS="$CFLAGS -DHASH_MODULE"
     PC_REQUIRES_PRIVATE="$PC_REQUIRES_PRIVATE libcrypto"
@@ -340,9 +348,11 @@ AM_CONDITIONAL([POSIX], [test x$posix = xtrue])
 AM_CONDITIONAL([PROFILING_ENABLED], [test x$profiling_enabled = xtrue])
 AM_CONDITIONAL([OPTIMIZATION], [test x$optimization = xtrue])
 AM_CONDITIONAL([ADDRESS_SANITIZER], [test x$address_sanitizer = xtrue])
+AM_CONDITIONAL([UB_SANITIZER], [test x$undefined_behaviour_sanitizer = xtrue])
 AM_CONDITIONAL([CUCKOO_MODULE], [test x$build_cuckoo_module = xtrue])
 AM_CONDITIONAL([MAGIC_MODULE], [test x$build_magic_module = xtrue])
 AM_CONDITIONAL([HASH_MODULE], [test x$build_hash_module = xtrue])
+AM_CONDITIONAL([AUTHENTICODE_MODULE], [test x$build_authenticode_module = xtrue])
 AM_CONDITIONAL([DOTNET_MODULE], [test x$build_dotnet_module = xtrue])
 AM_CONDITIONAL([MACHO_MODULE], [test x$build_macho_module = xtrue])
 AM_CONDITIONAL([PB_TESTS_MODULE], [test x$build_pb_tests_module = xtrue])
@@ -358,6 +368,9 @@ AM_CONDITIONAL([USE_NO_PROC], [test x$proc_interface = xnone ])
 AS_IF(
   [test x$proc_interface != xnone],[AC_DEFINE([HAVE_SCAN_PROC_IMPL],[1])],
   [test x$proc_interface = xnone],[AC_DEFINE([HAVE_SCAN_PROC_IMPL],[0])])
+
+# Configure TLSH function
+CFLAGS="$CFLAGS -DBUCKETS_128=1 -DCHECKSUM_1B=1"
 
 AC_SUBST([PC_REQUIRES_PRIVATE])
 AC_SUBST([PC_LIBS_PRIVATE])

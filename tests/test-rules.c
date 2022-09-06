@@ -33,7 +33,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <unistd.h>
 #include <yara.h>
 
@@ -2701,6 +2700,14 @@ void test_re()
   assert_true_rule_blob(
       "rule test { strings: $a =/abc([^\"\\\\])*\"/ nocase condition: $a }",
       TEXT_1024_BYTES "abc\xE0\x22");
+
+  // Non ascii characters are rejected in regular expressions.
+  assert_error(
+      "rule test { strings: $a = /¤/ condition: $a }",
+      ERROR_INVALID_REGULAR_EXPRESSION);
+  assert_error(
+      "rule test { strings: $a = /[1-£]/ condition: $a }",
+      ERROR_INVALID_REGULAR_EXPRESSION);
 
   YR_DEBUG_FPRINTF(1, stderr, "} // %s()\n", __FUNCTION__);
 }

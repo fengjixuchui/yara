@@ -1373,6 +1373,42 @@ Reference
 
     *Example: pe.delayed_import_details[1].name == "library_name"
 
+.. c:function:: import_rva(dll, function)
+
+    .. versionadded:: 4.3.0
+
+    Function returning the RVA of an import that matches the DLL name and
+    function name.
+
+    *Example: pe.import_rva("PtImageRW.dll", "ord4") == 254924
+
+.. c:function:: import_rva(dll, ordinal)
+
+    .. versionadded:: 4.3.0
+
+    Function returning the RVA of an import that matches the DLL name and
+    ordinal number.
+
+    *Example: pe.import_rva("PtPDF417Decode.dll", 4) == 254924
+
+.. c:function:: delayed_import_rva(dll, function)
+
+    .. versionadded:: 4.3.0
+
+    Function returning the RVA of a delayed import that matches the DLL name and
+    function name.
+
+    *Example: pe.delayed_import_rva("QDB.dll", "ord116") == 6110705
+
+.. c:function:: delayed_import_rva(dll, ordinal)
+
+    .. versionadded:: 4.3.0
+
+    Function returning the RVA of a delayed import that matches the DLL name and
+    ordinal number.
+
+    *Example: pe.delayed_import_rva("QDB.dll", 116) == 6110705
+
 .. c:function:: locale(locale_identifier)
 
     .. versionadded:: 3.2.0
@@ -1403,7 +1439,7 @@ Reference
     an MD5 hash of the PE's import table after some normalization. The imphash
     for a PE can be also computed with `pefile <http://code.google.com/p/pefile/>`_
     and you can find more information in `Mandiant's blog
-    <https://www.mandiant.com/blog/tracking-malware-import-hashing/>`_. The returned
+    <https://www.mandiant.com/resources/blog/tracking-malware-import-hashing/>`_. The returned
     hash string is always in lowercase.
 
     *Example: pe.imphash() == "b8bb385806b89680e13fc0cf24f4431e"*

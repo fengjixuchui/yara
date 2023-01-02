@@ -508,6 +508,10 @@ static void test_syntax()
       "rule test { strings: $a = \"a\" condition: for /foo/ of them: ($) }",
       ERROR_INVALID_VALUE);
 
+  assert_error(
+      "rule test { strings: $a = \"a\" condition: for 3.14159 of them: ($) }",
+      ERROR_INVALID_VALUE);
+
   YR_DEBUG_FPRINTF(1, stderr, "} // %s()\n", __FUNCTION__);
 }
 
@@ -525,6 +529,22 @@ static void test_anonymous_strings()
 static void test_warnings()
 {
   YR_DEBUG_FPRINTF(1, stderr, "+ %s() {\n", __FUNCTION__);
+
+  assert_warning("rule test { \
+    strings: \
+      $a = \"AXSERS\" \
+      $b = \"WXSMTS\" \
+    condition: \
+      2 of them at 0 \
+    }");
+
+  assert_warning("rule test { \
+    strings: \
+      $a = \"AXSERS\" \
+      $b = \"WXSMTS\" \
+    condition: \
+      all of them at 0 \
+    }");
 
   assert_warning("rule test { \
     strings: \
@@ -606,6 +626,22 @@ static void test_warnings()
       condition: \
         2 of (a*) \
     }");
+
+  assert_warning("rule test { \
+    strings: \
+      $a = \"AXSERS\" \
+    condition: \
+      2 of ($a*) at 0\
+    }");
+
+  assert_error(
+      "rule test { \
+      strings: \
+        $a = \"AXSERS\" \
+      condition: \
+        1 of them at \"x\"\
+    }",
+      ERROR_INVALID_VALUE);
 
   YR_DEBUG_FPRINTF(1, stderr, "} // %s()\n", __FUNCTION__);
 }
@@ -1644,6 +1680,12 @@ static void test_at()
 
   assert_true_rule(
       "rule test { \
+        strings: $a = \"miss\" \
+        condition: any of them at 0}",
+      "mississippi");
+
+  assert_true_rule(
+      "rule test { \
         strings: $a = \"ssi\" \
         condition: $a at (1024+2) and $a at (1024+5) }",
       TEXT_1024_BYTES "mississippi");
@@ -2225,6 +2267,27 @@ void test_for()
       }",
       "abcde");
 
+  assert_true_rule(
+      "rule test { \
+        condition: \
+          for all i in (\"a\", \"b\") : (i == \"a\" or i == \"b\") \
+      }",
+      NULL);
+
+  assert_error(
+      "rule test { \
+        condition: \
+          for any i in (\"a\"): (i == 0) \
+      }",
+      ERROR_WRONG_TYPE);
+
+  assert_error(
+      "rule test { \
+        condition: \
+          for any i in (\"a\", 0): (i == 0) \
+      }",
+      ERROR_WRONG_TYPE);
+
   YR_DEBUG_FPRINTF(1, stderr, "} // %s()\n", __FUNCTION__);
 }
 
@@ -2701,14 +2764,6 @@ void test_re()
       "rule test { strings: $a =/abc([^\"\\\\])*\"/ nocase condition: $a }",
       TEXT_1024_BYTES "abc\xE0\x22");
 
-  // Non ascii characters are rejected in regular expressions.
-  assert_error(
-      "rule test { strings: $a = /¤/ condition: $a }",
-      ERROR_INVALID_REGULAR_EXPRESSION);
-  assert_error(
-      "rule test { strings: $a = /[1-£]/ condition: $a }",
-      ERROR_INVALID_REGULAR_EXPRESSION);
-
   YR_DEBUG_FPRINTF(1, stderr, "} // %s()\n", __FUNCTION__);
 }
 
@@ -2810,6 +2865,17 @@ static void test_comments()
         strings: $a = { /*Some*/ 31 /*interleaved*/ [-] /*comments*/ 38 39 } \
         condition: !a == 9 }",
       "1234567890" TEXT_1024_BYTES);
+
+  // Test case for https://github.com/VirusTotal/yara/issues/1819
+  assert_true_rule(
+      "rule test { \
+        // single line comment with brace }\n\r \
+        strings: \
+          $a = \"foo\" ascii \
+        condition: \
+          $a \
+      }",
+      "foo");
 
   YR_DEBUG_FPRINTF(1, stderr, "} // %s()\n", __FUNCTION__);
 }
@@ -3666,6 +3732,20 @@ void test_defined()
           not defined ($a in (0..pe.number_of_resources)) and \
           not defined ($a in (pe.number_of_resources..5)) and \
           not defined ($a at pe.number_of_resources) \
+      }",
+      NULL);
+
+  // Test that operations that would trigger a SIGFPE are detected and
+  // returns undefined
+  assert_true_rule(
+      "rule t { \
+        strings: \
+          $a = /aaa/ \
+        condition: \
+          (not defined (1 \\ #a)) and \
+          (not defined (1 % #a)) and \
+          (not defined ((#a + -0x7FFFFFFFFFFFFFFF - 1) \\ -1)) and \
+          (not defined ((#a + -0x7FFFFFFFFFFFFFFF - 1) % -1)) \
       }",
       NULL);
 }
